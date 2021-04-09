@@ -1,4 +1,6 @@
 const mongoose = require('mongoose')
+const path = require('path')
+const coverImageBasePath = 'img/bookCovers'
 
 const bookSchema = new mongoose.Schema({
     title: {
@@ -32,4 +34,14 @@ const bookSchema = new mongoose.Schema({
     }
 })
 
+// creating the path to the cover image
+// use function() because we need "this."
+// with arrow function it doesn't work
+bookSchema.virtual('coverImagePath').get(function() {
+    if (this.coverImageName != null) {
+        return path.join('/', coverImageBasePath, this.coverImageName)
+    }
+})
+
 module.exports = mongoose.model('Book', bookSchema)
+module.exports.coverImageBasePath = coverImageBasePath

@@ -1,3 +1,5 @@
 node_modules
 .env
 .alf-notas.txt
+public/img/bookCovers
+public/img/alf-tmp
