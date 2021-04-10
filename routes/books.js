@@ -1,20 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const multer = require('multer')
-const path = require('path')
-const fs = require('fs')
 const Book = require('../models/book')
-const uploadPath = path.join('public',
-    Book.coverImageBasePath)
 const Author = require('../models/author')
-// if you misspell the types you get all sorts of errors like fileName undefined !
 const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif']
-const upload = multer({
-    dest: uploadPath,
-    fileFilter: (requ, file, callback) => {
-        callback(null, imageMimeTypes.includes(file.mimetype))
-    }
-})
 
 // All books route
 router.get('/', async (req, res) => {
@@ -48,36 +36,26 @@ router.get('/new', async (req, res) => {
 })
 
 // Create book route
-// upload.single('cover')   has to be the same as your views/books/_form_fields.ejs
-// inside <input type="file" name="cover">
-router.post('/', upload.single('cover'), async (req, res) => {
-    const fileName = req.file != null ? req.file.filename : null
+// everything changed for 'filePond' ... now the image is encoded as string to 
+// save in our database instead of the file sys of our web server...
+router.post('/', async (req, res) => {
     const book = new Book({
         title: req.body.title,
         author: req.body.author,
         publishDate: new Date(req.body.publishDate),
         pageCount: req.body.pageCount,
-        coverImageName: fileName,
         description: req.body.description
     })
+    saveCover(book, req.body.cover)
 
     try {
         const newBook = await book.save()
         // res.redirect(`books/${newBook.id}`)
         res.redirect(`books`)
     } catch {
-        if (book.coverImageName != null) {
-           removeBookCover(book.coverImageName)
-        }
         renderNewPage(res, book, true)
     }
 })
-
-function removeBookCover(fileName) {
-    fs.unlink(path.join(uploadPath, fileName), err => {
-        if (err) console.error(err)
-    })
-}
 
 async function renderNewPage(res, book, hasError = false) {
     try {
@@ -90,6 +68,15 @@ async function renderNewPage(res, book, hasError = false) {
         res.render('books/new', params )
     } catch {
         res.redirect('/books')
+    }
+}
+
+function saveCover(book, coverEncoded) {
+    if (coverEncoded == null) return
+    const cover = JSON.parse(coverEncoded)
+    if (cover != null && imageMimeTypes.includes(cover.type)) {
+        book.coverImage = new Buffer.from(cover.data, 'base64')
+        book.coverImageType = cover.type
     }
 }
 
